@@ -22,11 +22,10 @@ class QuizSet(BaseModel):
 # --- TANTÁRGYAK ÉS TÉMAKÖRÖK ---
 TOPICS = {
     "🧠 Dinamikus IQ & Logika": [
-        "Vegyes IQ és logikai feladatsor",
-        "Számsorozatok és matematikai minták",
-        "Verbális analógiák és fogalmi logika",
-        "Deduktív logikai rejtvények (állító-tagadó feladatok)",
-        "Kakukktojás és fogalmi rendszerezés"
+        "Teljes 30 kérdéses lépcsőzetes IQ-teszt (90–145 IQ)",
+        "Számsorozatok és matematikai minták (lépcsőzetes)",
+        "Verbális analógiák és fogalmi logika (lépcsőzetes)",
+        "Deduktív logikai rejtvények (lépcsőzetes)"
     ],
     "🏛️ Magyar történelem": [
         "Vegyes magyar történelem érettségi",
@@ -92,6 +91,10 @@ if "score" not in st.session_state:
     st.session_state.score = 0
 if "correct_count" not in st.session_state:
     st.session_state.correct_count = 0
+if "iq_raw_points" not in st.session_state:
+    st.session_state.iq_raw_points = 0
+if "iq_max_points" not in st.session_state:
+    st.session_state.iq_max_points = 0
 if "start_time" not in st.session_state:
     st.session_state.start_time = None
 if "answered" not in st.session_state:
@@ -102,10 +105,8 @@ if "asked_history" not in st.session_state:
     st.session_state.asked_history = []
 if "active_subject" not in st.session_state:
     st.session_state.active_subject = ""
-if "active_level" not in st.session_state:
-    st.session_state.active_level = "Középszint"
 
-# --- HELYI ADATBÁZIS ÉS MATEMATIKAI IQ GENERÁTOROK ---
+# --- HELYI IRODALMI ADATBÁZIS ---
 def create_local_lit_questions(num_local, history):
     pool = [{"tipus": "vers", **v} for v in VERSEK] + [{"tipus": "próza", **p} for p in PROZAK]
     available = [item for item in pool if item["idezet"] not in history]
@@ -129,37 +130,33 @@ def create_local_lit_questions(num_local, history):
             "question": q_text,
             "options": opts,
             "answer": correct,
-            "explanation": f"Ez az idézet **{item['szerzo']}**: *{item['mu']}* című művéből származik."
+            "explanation": f"Ez az idézet **{item['szerzo']}**: *{item['mu']}* című művéből származik.",
+            "weight": 1,
+            "tier_label": ""
         })
         st.session_state.asked_history.append(item["idezet"])
     return local_qs
 
-def create_math_iq_questions(num_math, level):
-    iq_qs = []
-    patterns = ["aritmetikai", "mertani", "novekvo_kulonbseg", "fibonacci", "valtakozo"]
-    if level == "Emelt szint":
-        patterns.extend(["negyzetszam_eltolt", "ketlepeses"])
-
-    for _ in range(num_math):
-        pattern_type = random.choice(patterns)
-        
-        if pattern_type == "aritmetikai":
-            start = random.randint(2, 25)
-            step = random.randint(4, 15)
+# --- LÉPCSŐZETES MATEMATIKAI IQ-GENERÁTOR (1-4. NEHÉZSÉGI SZINT) ---
+def generate_single_math_iq(tier):
+    if tier == 1:  # 90-105 IQ: Alapvető számsorok
+        if random.choice([True, False]):
+            start = random.randint(3, 25)
+            step = random.randint(4, 13)
             seq = [start + i * step for i in range(5)]
             ans = start + 5 * step
             expl = f"Minden lépésben **+{step}** adódik hozzá az előző számhoz ({seq[-1]} + {step} = {ans})."
-            
-        elif pattern_type == "mertani":
+        else:
             start = random.randint(2, 5)
             mult = random.choice([2, 3])
             seq = [start * (mult ** i) for i in range(5)]
             ans = start * (mult ** 5)
             expl = f"Minden szám az előző **{mult}-szerese** ({seq[-1]} × {mult} = {ans})."
-            
-        elif pattern_type == "novekvo_kulonbseg":
-            start = random.randint(1, 15)
-            diff = random.randint(1, 4)
+
+    elif tier == 2:  # 105-120 IQ: Növekvő különbség vagy Fibonacci
+        if random.choice([True, False]):
+            start = random.randint(2, 15)
+            diff = random.randint(2, 5)
             seq = [start]
             curr = start
             for i in range(4):
@@ -167,58 +164,69 @@ def create_math_iq_questions(num_math, level):
                 seq.append(curr)
             ans = curr + diff + 4
             expl = f"A különbség minden lépésben 1-gyel nő (+{diff}, +{diff+1}, +{diff+2}, +{diff+3}, végül **+{diff+4}**)."
-            
-        elif pattern_type == "fibonacci":
-            a, b = random.randint(1, 6), random.randint(2, 8)
+        else:
+            a, b = random.randint(2, 7), random.randint(3, 9)
             seq = [a, b]
             for _ in range(3):
                 seq.append(seq[-1] + seq[-2])
             ans = seq[-1] + seq[-2]
-            expl = f"Minden szám az előző két szám összege ({seq[-2]} + {seq[-1]} = {ans})."
+            expl = f"Fibonacci-elv: minden szám az előző két szám összege ({seq[-2]} + {seq[-1]} = {ans})."
 
-        elif pattern_type == "negyzetszam_eltolt":
+    elif tier == 3:  # 120-132 IQ: Kettős egymásba fűzött sorozat vagy eltolt négyzetszámok
+        if random.choice([True, False]):
+            a = random.randint(3, 12)
+            b = random.randint(25, 45)
+            seq = [a, b, a + 4, b - 3, a + 8]
+            ans = b - 6
+            expl = f"Két egymásba fűzött sorozat: a páratlan helyeken **+4**, a páros helyeken **-3** a szabály ({b - 3} - 3 = {ans})."
+        else:
+            offset = random.randint(2, 7)
+            seq = [(i + 2) ** 2 + offset for i in range(5)]
+            ans = 7 ** 2 + offset
+            expl = f"A négyzetszámokhoz (4, 9, 16, 25, 36, 49) minden lépésben **+{offset}** adódik (49 + {offset} = {ans})."
+
+    else:  # tier == 4: 132-145+ IQ (Mensa szint): Köbszámok / Kétszintű szorzás+eltolás / Prím-lépés
+        sub = random.choice(["kob", "szorzas_plusz", "prim_lepes"])
+        if sub == "kob":
             offset = random.randint(1, 5)
-            seq = [(i + 1) ** 2 + offset for i in range(5)]
-            ans = 6 ** 2 + offset
-            expl = f"A négyzetszámokhoz (1, 4, 9, 16, 25, 36) minden lépésben **+{offset}** adódik (36 + {offset} = {ans})."
-
-        elif pattern_type == "ketlepeses":
-            a = random.randint(2, 10)
-            b = random.randint(15, 30)
-            seq = [a, b, a + 3, b - 2, a + 6]
-            ans = b - 4
-            expl = f"Két egymásba fűzött sorozat: a páratlan helyeken **+3**, a páros helyeken **-2** a szabály ({b - 2} - 2 = {ans})."
-            
-        else:  # valtakozo
-            start = random.randint(10, 30)
-            plus = random.randint(5, 12)
-            minus = random.randint(2, 4)
+            seq = [(i + 1) ** 3 - offset for i in range(5)]
+            ans = 6 ** 3 - offset
+            expl = f"A köbszámokból (1, 8, 27, 64, 125, 216) minden lépésben **{offset}** van kivonva (216 - {offset} = {ans})."
+        elif sub == "szorzas_plusz":
+            start = random.randint(2, 4)
             seq = [start]
             for i in range(4):
-                if i % 2 == 0:
-                    seq.append(seq[-1] + plus)
-                else:
-                    seq.append(seq[-1] - minus)
-            ans = seq[-1] + plus
-            expl = f"Váltakozó szabály: először **+{plus}**, majd **-{minus}** ismétlődik ({seq[-1]} + {plus} = {ans})."
+                seq.append(seq[-1] * 2 + (i + 1))
+            ans = seq[-1] * 2 + 5
+            expl = f"Minden lépésben az előző szám **duplájához** adjuk hozzá a lépés sorszámát (×2+1, ×2+2, ×2+3, ×2+4, végül **×2+5** = {ans})."
+        else:
+            primes = [2, 3, 5, 7, 11, 13]
+            start = random.randint(5, 15)
+            seq = [start]
+            for p in primes[:4]:
+                seq.append(seq[-1] + p)
+            ans = seq[-1] + primes[4]
+            expl = f"A növekmények az egymást követő **prímszámok** (+2, +3, +5, +7, végül **+11** = {ans})."
 
-        wrong_set = set()
-        while len(wrong_set) < 3:
-            delta = random.choice([-10, -6, -5, -4, -3, -2, -1, 1, 2, 3, 4, 5, 6, 10])
-            if ans + delta > 0 and (ans + delta) != ans:
-                wrong_set.add(ans + delta)
-                
-        opts = [str(w) for w in wrong_set] + [str(ans)]
-        random.shuffle(opts)
-        seq_str = ", ".join(map(str, seq)) + ", **?**"
-        
-        iq_qs.append({
-            "question": f"Melyik szám következik a logikai sorozatban?\n\n### {seq_str}",
-            "options": opts,
-            "answer": str(ans),
-            "explanation": expl
-        })
-    return iq_qs
+    wrong_set = set()
+    while len(wrong_set) < 3:
+        delta = random.choice([-12, -8, -6, -5, -4, -3, -2, -1, 1, 2, 3, 4, 5, 6, 8, 12])
+        if ans + delta > 0 and (ans + delta) != ans:
+            wrong_set.add(ans + delta)
+
+    opts = [str(w) for w in wrong_set] + [str(ans)]
+    random.shuffle(opts)
+    seq_str = ", ".join(map(str, seq)) + ", **?**"
+    tier_names = {1: "I. szint (90–105 IQ)", 2: "II. szint (105–120 IQ)", 3: "III. szint (120–132 IQ)", 4: "IV. szint – Mensa zóna (132–145+ IQ)"}
+
+    return {
+        "question": f"Melyik szám következik a logikai sorozatban?\n\n### {seq_str}",
+        "options": opts,
+        "answer": str(ans),
+        "explanation": expl,
+        "weight": tier,
+        "tier_label": tier_names[tier]
+    }
 # --- OLDALSÁV (AI & JÁTÉK BEÁLLÍTÁSOK) ---
 with st.sidebar:
     st.header("🔑 AI Beállítások")
@@ -243,14 +251,15 @@ with st.sidebar:
     custom_topic = st.text_input("Vagy írj be saját tételt/altémát:", placeholder="pl. Aranybulla, Toldi, Fotoszintézis...")
     
     is_iq_selected = "iq" in subject.lower()
-    level_label = "Nehézségi szint:" if is_iq_selected else "Érettségi szint:"
-    level = st.radio(level_label, ["Középszint", "Emelt szint"], horizontal=True)
-    num_questions = st.slider("Kérdések száma egy körben:", 5, 15, 10)
     
     if is_iq_selected:
-        st.info("🧠 IQ-teszt módban nincs időkorlát és gyorsasági bónusz – koncentrálj a pontos logikára!")
+        st.info("🧠 **30 kérdéses lépcsőzetes IQ-teszt:**\n1–8. kérdés: 90–105 IQ\n9–16. kérdés: 105–120 IQ\n17–24. kérdés: 120–132 IQ\n25–30. kérdés: 132–145+ IQ (Mensa)")
+        level = "Lépcsőzetes (90–145 IQ)"
+        num_questions = 30
         speed_mode = False
     else:
+        level = st.radio("Érettségi szint:", ["Középszint", "Emelt szint"], horizontal=True)
+        num_questions = st.slider("Kérdések száma egy körben:", 5, 15, 10)
         speed_mode = st.toggle("⏱️ Gyorsasági bónusz", value=True, help="Ha kikapcsolod, minden jó válasz fix 200 pontot ér időkorlát nélkül.")
 
     start_btn = st.button("🚀 Új kör indítása", type="primary", use_container_width=True)
@@ -259,61 +268,41 @@ with st.sidebar:
 def generate_quiz(api_key, model_name, subject, topic, level, count, history):
     is_lit = "irodalom" in subject.lower()
     is_iq = "iq" in subject.lower()
-    local_qs = []
-    ai_count = count
+    client = genai.Client(api_key=api_key)
 
-    if is_lit:
-        num_local = count // 2
-        local_qs = create_local_lit_questions(num_local, history)
-        ai_count = count - len(local_qs)
-    elif is_iq and ("vegyes" in topic.lower() or "számsorozatok" in topic.lower()):
-        num_math = count if "számsorozatok" in topic.lower() else (count // 2)
-        local_qs = create_math_iq_questions(num_math, level)
-        ai_count = count - len(local_qs)
+    # --- LÉPCSŐZETES 30 KÉRDÉSES IQ TESZT ---
+    if is_iq:
+        # 4 zóna: 8 db Tier 1, 8 db Tier 2, 8 db Tier 3, 6 db Tier 4 = 30 kérdés
+        tier_plan = [1]*8 + [2]*8 + [3]*8 + [4]*6
+        tier_names = {
+            1: "I. szint (90–105 IQ)",
+            2: "II. szint (105–120 IQ)",
+            3: "III. szint (120–132 IQ)",
+            4: "IV. szint – Mensa zóna (132–145+ IQ)"
+        }
+        
+        if "számsorozatok" in topic.lower():
+            return [generate_single_math_iq(t) for t in tier_plan]
+        
+        # Vegyes vagy verbális/deduktív IQ: felét a Python matematika adja (15 db), felét az AI (15 db) lépcsőzetesen
+        math_indices = set(range(0, 30, 2)) if "teljes" in topic.lower() else set()
+        ai_needed = 30 - len(math_indices)
 
-    formatted_questions = list(local_qs)
-
-    if ai_count > 0:
-        client = genai.Client(api_key=api_key)
-        history_text = ""
-        if history:
-            recent = history[-25:]
-            history_text = f"\nEzeket a kérdéseket már feltetted korábban, kérlek NE ismételd meg őket:\n- " + "\n- ".join(recent)
-
-        if is_iq:
-            prompt = f"""
-            Készíts egy {ai_count} feladatból álló, magyar nyelvű, valódi logikai és kognitív IQ-teszt feladatsort!
-            
-            Témakör: {topic}
-            Nehézségi szint: {level} (Középszint = 100–115 IQ szintű feladatok, Emelt szint = 120–140 IQ szintű összetett logikai feladatok)
-            
-            Szabályok:
-            1. Készíts verbális analógiákat (pl. 'A : B = C : ?'), deduktív szillogizmusokat (állító-tagadó logikai következtetéseket), vagy kakukktojás feladatokat!
-            2. NE készíts számsorozatokat és NE tegyél fel lexikális műveltségi kérdéseket (pl. évszámok, fővárosok), kizárólag tiszta logikai gondolkodást igénylő feladatokat!
-            3. Minden feladathoz pontosan 4 válaszlehetőség tartozzon, és csak egyetlen logikailag támadhatatlan helyes megoldás létezzen.
-            4. Az 'explanation' mezőben vezesd le röviden, lépésről lépésre a logikai következtetést!
-            {history_text}
-            """
-        else:
-            lit_note = ""
-            if is_lit:
-                lit_note = "\n5. FONTOS: Ne idézz verseket vagy prózarészleteket (azok külön adatbázisból jönnek), hanem kérdezz irodalomtörténeti összefüggésekre, műfajokra, stíluskorszakokra, cselekményre és életrajzi adatokra!"
-
-            prompt = f"""
-            Készíts egy {ai_count} kérdésből álló, pörgős, QuizUp-stílusú magyar nyelvű feleletválasztós kvízt a magyar gimnáziumi érettségi követelmények alapján!
-            
-            Tantárgy: {subject}
-            Témakör: {topic}
-            Szint: {level}
-            
-            Szabályok:
-            1. A kérdések legyenek szakmailag 100%-ig pontosak, de tömörek és jól olvashatók.
-            2. Minden kérdéshez pontosan 4 válaszlehetőség tartozzon (1 helyes, 3 hihető, de hibás elterelő válasz).
-            3. A 'correct_answer' mező karakterre pontosan egyezzen meg a 4 válaszlehetőség egyikével.
-            4. Az 'explanation' mezőben adj egy rövid, 1-2 mondatos, tanulást segítő magyarázatot.
-            {lit_note}
-            {history_text}
-            """
+        prompt = f"""
+        Készíts pontosan {ai_needed} darab magyar nyelvű, valódi kognitív IQ-teszt feladatot SZIGORÚAN NÖVEKVŐ NEHÉZSÉGI SORRENDBEN!
+        Témakör: {topic}
+        
+        A feladatok sorrendje és nehézsége kövesse ezt a 4 lépcsőt:
+        - Az első {ai_needed // 4} feladat: KÖNNYŰ (90–105 IQ szint – alap verbális analógiák, egyszerű kakukktojás).
+        - A következő {ai_needed // 4} feladat: KÖZEPES (105–120 IQ szint – elvontabb fogalmi analógiák, kétlépéses logikai állítások).
+        - A következő {ai_needed // 4} feladat: NEHÉZ (120–132 IQ szint – összetett szillogizmusok, több feltételes deduktív rejtvények).
+        - Az utolsó {ai_needed - 3*(ai_needed // 4)} feladat: EXTRÉM NEHÉZ / MENSA SZINT (132–145+ IQ szint – mély absztrakt logikai paradoxonok, többszörösen összetett kizárásos rejtvények, amelyeket csak a legmagasabb intelligenciájúak tudnak megoldani).
+        
+        Szabályok:
+        1. NE készíts számsorozatokat és NE kérdezz lexikális műveltségi adatokat!
+        2. Minden feladathoz pontosan 4 válaszlehetőség tartozzon, és csak egyetlen logikailag támadhatatlan helyes válasz létezzen.
+        3. Az 'explanation' mezőben vezesd le röviden a logikai megoldást!
+        """
 
         response = client.models.generate_content(
             model=model_name,
@@ -324,16 +313,84 @@ def generate_quiz(api_key, model_name, subject, topic, level, count, history):
                 temperature=0.7
             ),
         )
+        ai_qs = QuizSet.model_validate_json(response.text).questions
         
-        quiz_data = QuizSet.model_validate_json(response.text)
-        for q in quiz_data.questions:
+        final_iq_list = []
+        ai_idx = 0
+        for i in range(30):
+            t = tier_plan[i]
+            if i in math_indices:
+                final_iq_list.append(generate_single_math_iq(t))
+            else:
+                if ai_idx < len(ai_qs):
+                    q = ai_qs[ai_idx]
+                    ai_idx += 1
+                    opts = list(q.options)
+                    random.shuffle(opts)
+                    final_iq_list.append({
+                        "question": q.question,
+                        "options": opts,
+                        "answer": q.correct_answer,
+                        "explanation": q.explanation,
+                        "weight": t,
+                        "tier_label": tier_names[t]
+                    })
+                else:
+                    final_iq_list.append(generate_single_math_iq(t))
+        return final_iq_list
+
+    # --- NORMÁL ÉRETTSÉGI KVÍZ ---
+    local_qs = []
+    ai_count = count
+    if is_lit:
+        num_local = count // 2
+        local_qs = create_local_lit_questions(num_local, history)
+        ai_count = count - len(local_qs)
+
+    formatted_questions = list(local_qs)
+    if ai_count > 0:
+        history_text = ""
+        if history:
+            recent = history[-25:]
+            history_text = f"\nEzeket a kérdéseket már feltetted korábban, kérlek NE ismételd meg őket:\n- " + "\n- ".join(recent)
+
+        lit_note = ""
+        if is_lit:
+            lit_note = "\n5. FONTOS: Ne idézz verseket vagy prózarészleteket (azok külön adatbázisból jönnek), hanem kérdezz irodalomtörténeti összefüggésekre, műfajokra, stíluskorszakokra, cselekményre és életrajzi adatokra!"
+
+        prompt = f"""
+        Készíts egy {ai_count} kérdésből álló, pörgős, QuizUp-stílusú magyar nyelvű feleletválasztós kvízt a magyar gimnáziumi érettségi követelmények alapján!
+        Tantárgy: {subject}
+        Témakör: {topic}
+        Szint: {level}
+        Szabályok:
+        1. A kérdések legyenek szakmailag 100%-ig pontosak, de tömörek és jól olvashatók.
+        2. Minden kérdéshez pontosan 4 válaszlehetőség tartozzon (1 helyes, 3 hihető, de hibás elterelő válasz).
+        3. A 'correct_answer' mező karakterre pontosan egyezzen meg a 4 válaszlehetőség egyikével.
+        4. Az 'explanation' mezőben adj egy rövid, 1-2 mondatos, tanulást segítő magyarázatot.
+        {lit_note}
+        {history_text}
+        """
+
+        response = client.models.generate_content(
+            model=model_name,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=QuizSet,
+                temperature=0.7
+            ),
+        )
+        for q in QuizSet.model_validate_json(response.text).questions:
             opts = list(q.options)
             random.shuffle(opts)
             formatted_questions.append({
                 "question": q.question,
                 "options": opts,
                 "answer": q.correct_answer,
-                "explanation": q.explanation
+                "explanation": q.explanation,
+                "weight": 1,
+                "tier_label": ""
             })
             st.session_state.asked_history.append(q.question)
 
@@ -344,7 +401,7 @@ if start_btn:
         st.error("⚠️ Kérlek add meg a Gemini API kulcsot a bal oldali sávban (vagy a Streamlit Secrets-ben)!")
     else:
         chosen_topic = custom_topic.strip() if custom_topic.strip() else subtopic
-        with st.spinner(f"⚡ {num_questions} db {level.lower()}ű feladat előkészítése..."):
+        with st.spinner(f"⚡ {num_questions} db feladat előkészítése..."):
             try:
                 st.session_state.questions = generate_quiz(
                     api_key, model_choice, subject, chosen_topic, level, num_questions, st.session_state.asked_history
@@ -352,21 +409,22 @@ if start_btn:
                 st.session_state.q_index = 0
                 st.session_state.score = 0
                 st.session_state.correct_count = 0
+                st.session_state.iq_raw_points = 0
+                st.session_state.iq_max_points = sum(q.get("weight", 1) for q in st.session_state.questions)
                 st.session_state.answered = False
                 st.session_state.last_result = None
                 st.session_state.start_time = time.time()
                 st.session_state.active_subject = subject
-                st.session_state.active_level = level
                 st.rerun()
             except Exception as e:
                 st.error(f"Hiba történt a generálás során: {e}")
 
 # --- FŐKÉPERNYŐ ---
 st.title("⚡ Érettségi & IQ QuizUp")
-st.caption("Gimnáziumi érettségi felkészítő és dinamikus kognitív IQ-teszt")
+st.caption("Gimnáziumi érettségi felkészítő és 30 kérdéses lépcsőzetes kognitív IQ-teszt")
 
 if not st.session_state.questions:
-    st.info("👈 Válassz tantárgyat vagy IQ-tesztet a bal oldali menüben, majd kattints az **Új kör indítása** gombra!")
+    st.info("👈 Válassz tantárgyat vagy a 30 kérdéses lépcsőzetes IQ-tesztet a bal oldali menüben, majd kattints az **Új kör indítása** gombra!")
 else:
     total_q = len(st.session_state.questions)
     idx = st.session_state.q_index
@@ -385,6 +443,8 @@ else:
     # JÁTÉK KÖZBEN
     if idx < total_q:
         q_data = st.session_state.questions[idx]
+        if running_iq and q_data.get("tier_label"):
+            st.caption(f"📊 Nehézségi zóna: **{q_data['tier_label']}** (Súlyozás: {q_data.get('weight', 1)}x)")
         st.subheader(f"{idx + 1}. / {total_q} feladat")
         st.markdown(f"### {q_data['question']}")
 
@@ -397,8 +457,10 @@ else:
                     if is_correct:
                         st.session_state.correct_count += 1
                         if running_iq:
-                            st.session_state.score += 200
-                            st.session_state.last_result = ("success", "✅ **Helyes logikai következtetés!**")
+                            w = q_data.get("weight", 1)
+                            st.session_state.iq_raw_points += w
+                            st.session_state.score += w * 100
+                            st.session_state.last_result = ("success", f"✅ **Helyes logikai következtetés!** (+{w} súlyozott logikai pont)")
                         elif speed_mode:
                             effective_time = max(0.0, elapsed - 5.0)
                             speed_bonus = max(0, int((45.0 - effective_time) * (50.0 / 45.0)))
@@ -433,28 +495,35 @@ else:
 
     # JÁTÉK VÉGE
     else:
-        ratio = st.session_state.correct_count / total_q
-
         if running_iq:
-            base_iq = 108 if st.session_state.active_level == "Emelt szint" else 100
-            estimated_iq = int(round(base_iq + (ratio - 0.60) * 65))
+            # Súlyozott nyerspontok aránya (max = 8*1 + 8*2 + 8*3 + 6*4 = 72 pont)
+            # Véletlen tippelés (25%) = 18 pont (~80 IQ)
+            # Átlagos teljesítmény (kb. 36-38 pont, azaz I-II. szint + pár III. szint) = 100 IQ
+            # Maximális 72 pont (Mensa zóna hibátlanul) = 145 IQ
+            max_w = max(1, st.session_state.iq_max_points)
+            weighted_ratio = st.session_state.iq_raw_points / max_w
+            estimated_iq = int(round(75 + weighted_ratio * 70))
             estimated_iq = max(75, min(145, estimated_iq))
 
-            st.metric("🧠 Becsült kognitív IQ-értéked", f"{estimated_iq} IQ ({st.session_state.correct_count}/{total_q} helyes)")
-            st.caption("Megjegyzés: Ez egy pszichometriai szempontból kalibrált, tájékoztató jellegű becslés (Wechsler-skála, átlag = 100, szórás = 15).")
+            st.metric(
+                "🧠 Súlyozott kognitív IQ-értéked",
+                f"{estimated_iq} IQ",
+                delta=f"{st.session_state.correct_count}/{total_q} helyes | {st.session_state.iq_raw_points}/{max_w} súlyozott pont"
+            )
+            st.caption("Megjegyzés: Lépcsőzetes nehézségű (90–145 IQ), súlyozott pontozású kognitív becslés (Wechsler-skála: átlag = 100, szórás = 15).")
 
             if estimated_iq < 90:
-                st.warning("🧩 **Átlag alatti tartomány (<90):** Most kicsit fáradtabb volt a logikai fókusz, vagy elkapkodtad a következtetéseket. Pihenj egyet, és próbáld újra!")
+                st.warning("🧩 **Átlag alatti tartomány (<90):** Az alapszintű feladatoknál is becsúszott több hiba. Pihenj egyet, és próbáld újra friss fejjel!")
             elif estimated_iq < 110:
-                st.info("⚖️ **Átlagos intelligencia-tartomány (90–109):** Stabil, kiegyensúlyozott logikai gondolkodás – a népesség nagy többségével azonos szinten teljesítettél.")
+                st.info("⚖️ **Átlagos intelligencia-tartomány (90–109):** Stabil teljesítmény az első két zónában – a népesség nagy többségével azonos szinten gondolkodsz.")
             elif estimated_iq < 125:
-                st.success("💡 **Átlag feletti intelligencia (110–124):** Kiemelkedő mintafelismerés és gyors absztrakt gondolkodás! Ez már egyetemi/kutatói szintű logikai érzék.")
+                st.success("💡 **Átlag feletti intelligencia (110–124):** A III. zóna (120+ IQ) feladataival is sikeresen megbirkóztál! Kiemelkedő analitikus gondolkodás.")
             elif estimated_iq < 135:
                 st.balloons()
-                st.success("🚀 **Kiváló, magas intelligencia (125–134):** A népesség felső 5%-ába tartozó logikai teljesítmény! Kiválóan átlátod a rejtett összefüggéseket.")
+                st.success("🚀 **Kiváló, magas intelligencia (125–134):** A népesség felső 5%-ába tartozó logikai teljesítmény! A legnehezebb feladványok nagy részét is megoldottad.")
             else:
                 st.balloons()
-                st.success("👑 **Kiemelkedő, Mensa-szintű teljesítmény (135+):** A népesség felső 1-2%-ába tartozó zseniális analitikus elme! Gratulálok!")
+                st.success("👑 **Mensa-szintű kiemelkedő teljesítmény (135–145):** A népesség felső 1–2%-ába tartozó zseniális elme! A IV. (Mensa) zóna feladatai sem fogtak ki rajtad!")
         else:
             max_possible = total_q * 200
             score_pct = int((st.session_state.score / max_possible) * 100)
