@@ -1,3 +1,4 @@
+from idezetek import VERSEK, PROZAK
 import streamlit as st
 import time
 import random
@@ -121,61 +122,98 @@ with st.sidebar:
     start_btn = st.button("🚀 Új QuizUp kör indítása", type="primary", use_container_width=True)
 
 # --- KÉRDÉSEK GENERÁLÁSA (CSAK GOMBNYOMÁSRA!) ---
-def generate_quiz(api_key, model_name, subject, topic, level, count, history):
-    client = genai.Client(api_key=api_key)
+def create_local_lit_questions(num_local, history):
+    pool = [{"tipus": "vers", **v} for v in VERSEK] + [{"tipus": "próza", **p} for p in PROZAK]
+    available = [item for item in pool if item["idezet"] not in history]
+    if len(available) < num_local:
+        available = pool
     
-    history_text = ""
-    if history:
-        recent = history[-25:]
-        history_text = f"\nEzeket a kérdéseket már feltetted korábban, kérlek NE ismételd meg őket:\n- " + "\n- ".join(recent)
+    chosen = random.sample(available, min(num_local, len(available)))
+    all_pairs = list({f"{item['szerzo']} – {item['mu']}" for item in pool})
+    
+    local_qs = []
+    for item in chosen:
+        correct = f"{item['szerzo']} – {item['mu']}"
+        wrong_choices = random.sample([p for p in all_pairs if p != correct], 3)
+        opts = wrong_choices + [correct]
+        random.shuffle(opts)
+        
+        label = "versrészletnek" if item["tipus"] == "vers" else "próza- / drámarészletnek"
+        q_text = f"Ki a szerzője és mi a címe az alábbi {label}?\n\n> *„{item['idezet']}”*"
+        
+        local_qs.append({
+            "question": q_text,
+            "options": opts,
+            "answer": correct,
+            "explanation": f"Ez az idézet **{item['szerzo']}**: *{item['mu']}* című művéből származik."
+        })
+        st.session_state.asked_history.append(item["idezet"])
+    return local_qs
 
-    lit_extra = ""
-    if "irodalom" in subject.lower():
-        lit_extra = """
-    5. SPECIÁLIS IRODALOM SZABÁLY: A kérdések felében idézz szó szerint egy közismert, valódi 2-4 soros magyar versrészletet vagy jellegzetes prózarészletet (pl. Petőfi, Arany, Ady, Babits, Kosztolányi, József Attila, Radnóti, Móricz, Mikszáth, Örkény műveiből), és kérdezd meg, ki a szerzője vagy mi a mű címe!
-    FONTOS: SOHA NE találj ki vagy költs fiktív sorokat! Csak olyan idézetet használj, amelynek 100%-ig biztos vagy a szó szerinti pontosságában a magyar irodalmi kánonból!
+def generate_quiz(api_key, model_name, subject, topic, level, count, history):
+    is_lit = "irodalom" in subject.lower()
+    local_qs = []
+    ai_count = count
+
+    if is_lit:
+        num_local = count // 2
+        local_qs = create_local_lit_questions(num_local, history)
+        ai_count = count - len(local_qs)
+
+    formatted_questions = list(local_qs)
+
+    if ai_count > 0:
+        client = genai.Client(api_key=api_key)
+        history_text = ""
+        if history:
+            recent = history[-25:]
+            history_text = f"\nEzeket a kérdéseket már feltetted korábban, kérlek NE ismételd meg őket:\n- " + "\n- ".join(recent)
+
+        lit_note = ""
+        if is_lit:
+            lit_note = "\n5. FONTOS: Ne idézz verseket vagy prózarészleteket (azok külön adatbázisból jönnek), hanem kérdezz irodalomtörténeti összefüggésekre, műfajokra, stíluskorszakokra, cselekményre és életrajzi adatokra!"
+
+        prompt = f"""
+        Készíts egy {ai_count} kérdésből álló, pörgős, QuizUp-stílusú magyar nyelvű feleletválasztós kvízt a magyar gimnáziumi érettségi követelmények alapján!
+        
+        Tantárgy: {subject}
+        Témakör: {topic}
+        Szint: {level}
+        
+        Szabályok:
+        1. A kérdések legyenek szakmailag 100%-ig pontosak, de tömörek és jól olvashatók.
+        2. Minden kérdéshez pontosan 4 válaszlehetőség tartozzon (1 helyes, 3 hihető, de hibás elterelő válasz).
+        3. A 'correct_answer' mező karakterre pontosan egyezzen meg a 4 válaszlehetőség egyikével.
+        4. Az 'explanation' mezőben adj egy rövid, 1-2 mondatos, tanulást segítő magyarázatot.
+        {lit_note}
+        {history_text}
         """
 
-    prompt = f"""
-    Készíts egy {count} kérdésből álló, pörgős, QuizUp-stílusú magyar nyelvű feleletválasztós kvízt a magyar gimnáziumi érettségi követelmények alapján!
-    
-    Tantárgy: {subject}
-    Témakör: {topic}
-    Szint: {level}
-    
-    Szabályok:
-    1. A kérdések legyenek szakmailag 100%-ig pontosak, de tömörek és jól olvashatók.
-    2. Minden kérdéshez pontosan 4 válaszlehetőség tartozzon (1 helyes, 3 hihető, de hibás elterelő válasz).
-    3. A 'correct_answer' mező karakterre pontosan egyezzen meg a 4 válaszlehetőség egyikével.
-    4. Az 'explanation' mezőben adj egy rövid, 1-2 mondatos, tanulást segítő magyarázatot (évszámokkal, műcímekkel vagy törvényszerűségekkel).
-    {lit_extra}
-    {history_text}
-    """
-
-    response = client.models.generate_content(
-        model=model_name,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            response_schema=QuizSet,
-            temperature=0.7
-        ),
-    )
-    
-    quiz_data = QuizSet.model_validate_json(response.text)
-    formatted_questions = []
-    for q in quiz_data.questions:
-        opts = list(q.options)
-        random.shuffle(opts)
-        formatted_questions.append({
-            "question": q.question,
-            "options": opts,
-            "answer": q.correct_answer,
-            "explanation": q.explanation
-        })
-        st.session_state.asked_history.append(q.question)
+        response = client.models.generate_content(
+            model=model_name,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=QuizSet,
+                temperature=0.7
+            ),
+        )
         
+        quiz_data = QuizSet.model_validate_json(response.text)
+        for q in quiz_data.questions:
+            opts = list(q.options)
+            random.shuffle(opts)
+            formatted_questions.append({
+                "question": q.question,
+                "options": opts,
+                "answer": q.correct_answer,
+                "explanation": q.explanation
+            })
+            st.session_state.asked_history.append(q.question)
+
+    random.shuffle(formatted_questions)
     return formatted_questions
+
 
 if start_btn:
     if not api_key:
