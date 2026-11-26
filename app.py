@@ -18,13 +18,21 @@ class QuizQuestion(BaseModel):
 class QuizSet(BaseModel):
     questions: list[QuizQuestion]
 
-# --- TANTÁRGYAK ÉS TÉMAKÖRÖK ---
 TOPICS = {
+    "🩻 Anatómia és Élettan": [
+        "Vegyes anatómiai feladatsor",
+        "Mozgásrendszer (csontok, ízületek, vázizmok)",
+        "Keringési rendszer (szív, erek, vér és nyirok)",
+        "Légzőrendszer és gázcsere",
+        "Emésztőrendszer és anyagcsere",
+        "Kiválasztó- és szaporítórendszer",
+        "Idegrendszer és érzékszervek",
+        "Hormonrendszer (endokrin szervek)"
+    ],
     "🧬 Biológia": [
         "Vegyes érettségi feladatsor",
         "Sejtbiológia és biokémia",
         "Genetika és öröklődéstan",
-        "Emberi szervezet működése (Élettan)",
         "Ökológia és evolúció",
         "Növény- és állatrendszertan"
     ],
@@ -44,15 +52,6 @@ TOPICS = {
         "Optika és hullámtan",
         "Modern fizika (atom- és magfizika)"
     ]
-        Anatómia és Élettan": [
-        "Vegyes anatómiai feladatsor",
-        "Mozgásrendszer (csontok, ízületek, vázizmok)",
-        "Keringési rendszer (szív, erek, vér és nyirok)",
-        "Légzőrendszer és gázcsere",
-        "Emésztőrendszer és anyagcsere",
-        "Kiválasztó- és szaporítórendszer",
-        "Idegrendszer és érzékszervek",
-        "Hormonrendszer (endokrin szervek)"
 }
 
 # --- SESSION STATE INICIALIZÁLÁSA ---
