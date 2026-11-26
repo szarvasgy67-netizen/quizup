@@ -132,7 +132,8 @@ def generate_quiz(api_key, model_name, subject, topic, level, count, history):
     lit_extra = ""
     if "irodalom" in subject.lower():
         lit_extra = """
-    5. SPECIÁLIS IRODALOM SZABÁLY: A kérdések legalább felében (kb. 50%-ában) idézz egy 2-4 soros pontos, klasszikus magyar versrészletet vagy egy 2-3 mondatos jellegzetes prózarészletet idézőjelek között (sortörésekkel tagolva), és kérdezd meg, hogy ki a szerzője vagy melyik műből származik az idézet!
+    5. SPECIÁLIS IRODALOM SZABÁLY: A kérdések felében idézz szó szerint egy közismert, valódi 2-4 soros magyar versrészletet vagy jellegzetes prózarészletet (pl. Petőfi, Arany, Ady, Babits, Kosztolányi, József Attila, Radnóti, Móricz, Mikszáth, Örkény műveiből), és kérdezd meg, ki a szerzője vagy mi a mű címe!
+    FONTOS: SOHA NE találj ki vagy költs fiktív sorokat! Csak olyan idézetet használj, amelynek 100%-ig biztos vagy a szó szerinti pontosságában a magyar irodalmi kánonból!
         """
 
     prompt = f"""
@@ -148,6 +149,13 @@ def generate_quiz(api_key, model_name, subject, topic, level, count, history):
     3. A 'correct_answer' mező karakterre pontosan egyezzen meg a 4 válaszlehetőség egyikével.
     4. Az 'explanation' mezőben adj egy rövid, 1-2 mondatos, tanulást segítő magyarázatot (évszámokkal, műcímekkel vagy törvényszerűségekkel).
     {lit_extra}
+    {history_text}
+    """
+
+    5. SPECIÁLIS IRODALOM SZABÁLY: A kérdések felében idézz szó szerint egy közismert, valódi 2-4 soros magyar versrészletet vagy jellegzetes prózarészletet (pl. Petőfi, Arany, Ady, Babits, Kosztolányi, József Attila, Radnóti, Móricz, Mikszáth, Örkény műveiből), és kérdezd meg, ki a szerzője vagy mi a mű címe!
+    FONTOS: SOHA NE találj ki vagy költs fiktív sorokat! Csak olyan idézetet használj, amelynek 100%-ig biztos vagy a szó szerinti pontosságában a magyar irodalmi kánonból!
+        """
+
     {history_text}
     """
 
