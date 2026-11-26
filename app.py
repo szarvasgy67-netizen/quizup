@@ -44,6 +44,15 @@ TOPICS = {
         "Optika és hullámtan",
         "Modern fizika (atom- és magfizika)"
     ]
+        Anatómia és Élettan": [
+        "Vegyes anatómiai feladatsor",
+        "Mozgásrendszer (csontok, ízületek, vázizmok)",
+        "Keringési rendszer (szív, erek, vér és nyirok)",
+        "Légzőrendszer és gázcsere",
+        "Emésztőrendszer és anyagcsere",
+        "Kiválasztó- és szaporítórendszer",
+        "Idegrendszer és érzékszervek",
+        "Hormonrendszer (endokrin szervek)"
 }
 
 # --- SESSION STATE INICIALIZÁLÁSA ---
