@@ -252,13 +252,24 @@ else:
                 st.session_state.start_time = time.time()
                 st.rerun()
 
-    # JÁTÉK VÉGE
+        # JÁTÉK VÉGE
     else:
-        st.balloons()
-        st.success(f"🎉 **Gratulálok! Végigértél a feladatsoron!**")
         max_possible = total_q * 200
         percentage = int((st.session_state.score / max_possible) * 100)
         st.metric("Végső pontszámod", f"{st.session_state.score} / {max_possible} pont ({percentage}%)")
+
+        if percentage < 25:
+            st.error("📕 **Érdemjegy: 1 (Elégtelen)** – Ülj le, fiam, egyes! Augustusi pótvizsgán találkozunk, addig is elő a tankönyvekkel!")
+        elif percentage < 40:
+            st.warning("📙 **Érdemjegy: 2 (Elégséges)** – Rezgő léc, de megvan a kettes! Van még hová fejlődni, de a bizonyítványban már nem piros.")
+        elif percentage < 60:
+            st.info("📒 **Érdemjegy: 3 (Közepes)** – Stabil közepes! Nem váltod meg vele a világot, de egy jó erős hármassal már nyugodtan mehetsz haza.")
+        elif percentage < 80:
+            st.success("📗 **Érdemjegy: 4 (Jó)** – Szép munka, ez már egy sima négyes! Egy hajszál választott el a jelesről, legközelebb meglesz!")
+        else:
+            st.balloons()
+            st.success("🏆 **Érdemjegy: 5 (Jeles)** – Hűha, gratula! Te már most mehetsz érettségizni, a bizottság is állva tapsolna!")
+
         if st.button("🔄 Új kör indítása", type="primary"):
             st.session_state.questions = []
             st.rerun()
