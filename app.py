@@ -6,7 +6,7 @@ from google import genai
 from google.genai import types
 
 # --- OLDAL BEÁLLÍTÁSOK ---
-st.set_page_config(page_title="Érettségi QuizUp ⚡", page_icon="🧬", layout="centered")
+st.set_page_config(page_title="Érettségi QuizUp ⚡", page_icon="🎓", layout="centered")
 
 # --- JSON SÉMA A HIBAMENTES AI VÁLASZHOZ ---
 class QuizQuestion(BaseModel):
@@ -18,7 +18,28 @@ class QuizQuestion(BaseModel):
 class QuizSet(BaseModel):
     questions: list[QuizQuestion]
 
+# --- TANTÁRGYAK ÉS TÉMAKÖRÖK ---
 TOPICS = {
+    "🏛️ Magyar történelem": [
+        "Vegyes magyar történelem érettségi",
+        "Honfoglalás és az Árpád-kor (1301-ig)",
+        "Vegyes-házi királyok és a Hunyadiak kora (1301–1526)",
+        "Három részre szakadt ország és a Rákóczi-szabadságharc",
+        "Reformkor és az 1848–49-es forradalom és szabadságharc",
+        "A dualizmus kora (1867–1918)",
+        "A Horthy-korszak és a II. világháború",
+        "A Rákosi- és a Kádár-korszak, rendszerváltás (1945–1990)"
+    ],
+    "📚 Magyar irodalom": [
+        "Vegyes magyar irodalom érettségi",
+        "Ókor, középkor és reneszánsz (Balassi Bálint, Zrínyi Miklós)",
+        "Felvilágosodás és reformkor (Csokonai, Berzsenyi, Katona József)",
+        "A romantika nagyjai (Vörösmarty, Petőfi, Arany János)",
+        "A Nyugat első nemzedéke (Ady, Babits, Kosztolányi, Móricz)",
+        "A két világháború közötti irodalom (József Attila, Radnóti, Márai)",
+        "Kortárs és 1945 utáni magyar irodalom (Pilinszky, Örkény, Kertész)",
+        "Műfajelmélet, stíluskorszakok és verstani alapok"
+    ],
     "🩻 Anatómia és Élettan": [
         "Vegyes anatómiai feladatsor",
         "Mozgásrendszer (csontok, ízületek, vázizmok)",
@@ -69,7 +90,6 @@ if "last_result" not in st.session_state:
     st.session_state.last_result = None
 if "asked_history" not in st.session_state:
     st.session_state.asked_history = []
-
 # --- OLDALSÁV (AI & JÁTÉK BEÁLLÍTÁSOK) ---
 with st.sidebar:
     st.header("🔑 AI Beállítások")
@@ -92,10 +112,11 @@ with st.sidebar:
     
     subject = st.selectbox("Tantárgy:", list(TOPICS.keys()))
     subtopic = st.selectbox("Témakör:", TOPICS[subject])
-    custom_topic = st.text_input("Vagy írj be saját tételt/altémát:", placeholder="pl. Fotoszintézis, Redoxireakciók...")
+    custom_topic = st.text_input("Vagy írj be saját tételt/altémát:", placeholder="pl. Aranybulla, Toldi, Fotoszintézis...")
     
     level = st.radio("Érettségi szint:", ["Középszint", "Emelt szint"], horizontal=True)
     num_questions = st.slider("Kérdések száma egy körben:", 5, 15, 10)
+    speed_mode = st.toggle("⏱️ Gyorsasági bónusz", value=True, help="Ha kikapcsolod, minden jó válasz fix 200 pontot ér időkorlát nélkül.")
 
     start_btn = st.button("🚀 Új QuizUp kör indítása", type="primary", use_container_width=True)
 
@@ -105,7 +126,7 @@ def generate_quiz(api_key, model_name, subject, topic, level, count, history):
     
     history_text = ""
     if history:
-        recent = history[-20:]
+        recent = history[-25:]
         history_text = f"\nEzeket a kérdéseket már feltetted korábban, kérlek NE ismételd meg őket:\n- " + "\n- ".join(recent)
 
     prompt = f"""
@@ -116,10 +137,10 @@ def generate_quiz(api_key, model_name, subject, topic, level, count, history):
     Szint: {level}
     
     Szabályok:
-    1. A kérdések legyenek szakmailag 100%-ig pontosak, de tömörek és jól olvashatók gyors játékhoz.
+    1. A kérdések legyenek szakmailag 100%-ig pontosak, de tömörek és jól olvashatók.
     2. Minden kérdéshez pontosan 4 válaszlehetőség tartozzon (1 helyes, 3 hihető, de hibás elterelő válasz).
     3. A 'correct_answer' mező karakterre pontosan egyezzen meg a 4 válaszlehetőség egyikével.
-    4. Az 'explanation' mezőben adj egy rövid, 1-2 mondatos, tanulást segítő magyarázatot.
+    4. Az 'explanation' mezőben adj egy rövid, 1-2 mondatos, tanulást segítő magyarázatot (évszámokkal, műcímekkel vagy törvényszerűségekkel).
     {history_text}
     """
 
@@ -169,7 +190,7 @@ if start_btn:
 
 # --- FŐKÉPERNYŐ ---
 st.title("⚡ Érettségi QuizUp")
-st.caption("Gimnáziumi Biológia, Kémia és Fizika villámkvíz gyorsasági bónusszal")
+st.caption("Gimnáziumi Történelem, Irodalom, Anatómia, Biológia, Kémia és Fizika villámkvíz")
 
 if not st.session_state.questions:
     st.info("👈 Válassz tantárgyat, témakört és szintet a bal oldali menüben, majd kattints az **Új QuizUp kör indítása** gombra!")
@@ -178,7 +199,7 @@ else:
     idx = st.session_state.q_index
 
     # Fejléc: Haladás és Pontszám
-    col1, col2 = st.columns([3, 1])
+    col1, col2 = st.columns(2)
     with col1:
         st.progress(idx / total_q)
     with col2:
@@ -198,11 +219,16 @@ else:
                     is_correct = (option == q_data["answer"])
                     
                     if is_correct:
-                        # Alap 100 pont + max 100 gyorsasági bónusz (15 mp alatt)
-                        speed_bonus = max(0, int((15 - elapsed) * (100 / 15)))
-                        gained = 100 + speed_bonus
-                        st.session_state.score += gained
-                        st.session_state.last_result = ("success", f"✅ Helyes válasz! (+100 alap + {speed_bonus} gyorsasági bónusz = **{gained} pont** | Idő: {elapsed:.1f} mp)")
+                        if speed_mode:
+                            effective_time = max(0.0, elapsed - 5.0)
+                            speed_bonus = max(0, int((45.0 - effective_time) * (50.0 / 45.0)))
+                            gained = 150 + speed_bonus
+                            st.session_state.score += gained
+                            st.session_state.last_result = ("success", f"✅ Helyes válasz! (+150 alap + {speed_bonus} gyorsasági bónusz = **{gained} pont** | Idő: {elapsed:.1f} mp)")
+                        else:
+                            gained = 200
+                            st.session_state.score += gained
+                            st.session_state.last_result = ("success", f"✅ Helyes válasz! (**+200 pont** | Idő: {elapsed:.1f} mp)")
                     else:
                         st.session_state.last_result = ("error", f"❌ Sajnos nem talált! A helyes válasz: **{q_data['answer']}**")
                     
@@ -231,8 +257,8 @@ else:
         st.balloons()
         st.success(f"🎉 **Gratulálok! Végigértél a feladatsoron!**")
         max_possible = total_q * 200
-        st.metric("Végső pontszámod", f"{st.session_state.score} / {max_possible} pont")
-        
-        if st.button("🔄 Új kör indítása ugyanebben a témában", type="primary"):
+        percentage = int((st.session_state.score / max_possible) * 100)
+        st.metric("Végső pontszámod", f"{st.session_state.score} / {max_possible} pont ({percentage}%)")
+        if st.button("🔄 Új kör indítása", type="primary"):
             st.session_state.questions = []
             st.rerun()
