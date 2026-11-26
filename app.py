@@ -129,6 +129,12 @@ def generate_quiz(api_key, model_name, subject, topic, level, count, history):
         recent = history[-25:]
         history_text = f"\nEzeket a kérdéseket már feltetted korábban, kérlek NE ismételd meg őket:\n- " + "\n- ".join(recent)
 
+    lit_extra = ""
+    if "irodalom" in subject.lower():
+        lit_extra = """
+    5. SPECIÁLIS IRODALOM SZABÁLY: A kérdések legalább felében (kb. 50%-ában) idézz egy 2-4 soros pontos, klasszikus magyar versrészletet vagy egy 2-3 mondatos jellegzetes prózarészletet idézőjelek között (sortörésekkel tagolva), és kérdezd meg, hogy ki a szerzője vagy melyik műből származik az idézet!
+        """
+
     prompt = f"""
     Készíts egy {count} kérdésből álló, pörgős, QuizUp-stílusú magyar nyelvű feleletválasztós kvízt a magyar gimnáziumi érettségi követelmények alapján!
     
@@ -141,8 +147,10 @@ def generate_quiz(api_key, model_name, subject, topic, level, count, history):
     2. Minden kérdéshez pontosan 4 válaszlehetőség tartozzon (1 helyes, 3 hihető, de hibás elterelő válasz).
     3. A 'correct_answer' mező karakterre pontosan egyezzen meg a 4 válaszlehetőség egyikével.
     4. Az 'explanation' mezőben adj egy rövid, 1-2 mondatos, tanulást segítő magyarázatot (évszámokkal, műcímekkel vagy törvényszerűségekkel).
+    {lit_extra}
     {history_text}
     """
+
 
     response = client.models.generate_content(
         model=model_name,
