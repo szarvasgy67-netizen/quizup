@@ -152,14 +152,6 @@ def generate_quiz(api_key, model_name, subject, topic, level, count, history):
     {history_text}
     """
 
-    5. SPECIÁLIS IRODALOM SZABÁLY: A kérdések felében idézz szó szerint egy közismert, valódi 2-4 soros magyar versrészletet vagy jellegzetes prózarészletet (pl. Petőfi, Arany, Ady, Babits, Kosztolányi, József Attila, Radnóti, Móricz, Mikszáth, Örkény műveiből), és kérdezd meg, ki a szerzője vagy mi a mű címe!
-    FONTOS: SOHA NE találj ki vagy költs fiktív sorokat! Csak olyan idézetet használj, amelynek 100%-ig biztos vagy a szó szerinti pontosságában a magyar irodalmi kánonból!
-        """
-
-    {history_text}
-    """
-
-
     response = client.models.generate_content(
         model=model_name,
         contents=prompt,
@@ -268,14 +260,14 @@ else:
                 st.session_state.start_time = time.time()
                 st.rerun()
 
-        # JÁTÉK VÉGE
+    # JÁTÉK VÉGE
     else:
         max_possible = total_q * 200
         percentage = int((st.session_state.score / max_possible) * 100)
         st.metric("Végső pontszámod", f"{st.session_state.score} / {max_possible} pont ({percentage}%)")
 
         if percentage < 25:
-            st.error("📕 **Érdemjegy: 1 (Elégtelen)** – Ülj le, fiam, egyes! Augustusi pótvizsgán találkozunk, addig is elő a tankönyvekkel!")
+            st.error("📕 **Érdemjegy: 1 (Elégtelen)** – Ülj le, fiam, egyes! Augusztusi pótvizsgán találkozunk, addig is elő a tankönyvekkel!")
         elif percentage < 40:
             st.warning("📙 **Érdemjegy: 2 (Elégséges)** – Rezgő léc, de megvan a kettes! Van még hová fejlődni, de a bizonyítványban már nem piros.")
         elif percentage < 60:
