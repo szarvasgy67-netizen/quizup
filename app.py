@@ -38,6 +38,22 @@ TOPICS = {
         "A Horthy-korszak és a II. világháború",
         "A Rákosi- és a Kádár-korszak, rendszerváltás (1945–1990)"
     ],
+    "🌍 Egyetemes történelem": [
+        "Vegyes egyetemes történelem érettségi",
+        "Ókori kelet, görög és római civilizáció",
+        "Középkori Európa, az iszlám világ és a nagy földrajzi felfedezések",
+        "Felvilágosodás, ipari forradalmak és a polgári átalakulás kora",
+        "Az I. világháború és a két világháború közötti időszak",
+        "A II. világháború és a hidegháború kora (1939–1991)"
+    ],
+    "📐 Matematika": [
+        "Vegyes matematika érettségi (számítási és elméleti)",
+        "Algebra, egyenletek, egyenlőtlenségek és sorozatok",
+        "Függvények, határérték, differenciál- és integrálszámítás",
+        "Koordinátageometria, sík- és térgeometria",
+        "Trigonometria és vektorok",
+        "Kombinatorika, valószínűségszámítás és statisztika"
+    ],
     "📚 Magyar irodalom": [
         "Vegyes magyar irodalom érettségi",
         "Ókor, középkor és reneszánsz (Balassi Bálint, Zrínyi Miklós)",
@@ -80,9 +96,8 @@ TOPICS = {
         "Elektromosságtan és mágnesesség",
         "Optika és hullámtan",
         "Modern fizika (atom- és magfizika)"
-    ]
+    ],
 }
-
 # --- SESSION STATE INICIALIZÁLÁSA ---
 if "questions" not in st.session_state:
     st.session_state.questions = []
@@ -108,6 +123,7 @@ if "asked_history" not in st.session_state:
     st.session_state.asked_history = []
 if "active_subject" not in st.session_state:
     st.session_state.active_subject = ""
+
 # --- HELYI IRODALMI ADATBÁZIS ---
 def create_local_lit_questions(num_local, history):
     pool = [{"tipus": "vers", **v} for v in VERSEK] + [{"tipus": "próza", **p} for p in PROZAK]
@@ -234,7 +250,6 @@ def generate_single_math_iq(tier):
         "weight": tier,
         "tier_label": tier_names[tier]
     }
-
 # --- OLDALSÁV (AI & JÁTÉK BEÁLLÍTÁSOK) ---
 with st.sidebar:
     st.header("🔑 AI Beállítások")
@@ -271,6 +286,7 @@ with st.sidebar:
         speed_mode = st.toggle("⏱️ Gyorsasági bónusz", value=True, help="Ha kikapcsolod, minden jó válasz fix 200 pontot ér időkorlát nélkül.")
 
     start_btn = st.button("🚀 Új kör indítása", type="primary", use_container_width=True)
+
 # --- KÉRDÉSEK GENERÁLÁSA (CSAK GOMBNYOMÁSRA!) ---
 def generate_quiz(api_key, model_name, subject, topic, level, count, history):
     is_lit = "irodalom" in subject.lower()
@@ -279,7 +295,7 @@ def generate_quiz(api_key, model_name, subject, topic, level, count, history):
 
     # --- LÉPCSŐZETES 30 KÉRDÉSES IQ TESZT ---
     if is_iq:
-        tier_plan = [1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4]
+        tier_plan =
         tier_names = {
             1: "I. szint (90–105 IQ)",
             2: "II. szint (105–120 IQ)",
@@ -372,7 +388,6 @@ def generate_quiz(api_key, model_name, subject, topic, level, count, history):
                 else:
                     final_iq_list.append(generate_single_math_iq(t))
         return final_iq_list
-
     # --- NORMÁL ÉRETTSÉGI KVÍZ ---
     local_qs = []
     ai_count = count
@@ -388,9 +403,19 @@ def generate_quiz(api_key, model_name, subject, topic, level, count, history):
             recent = history[-25:]
             history_text = f"\nEzeket a kérdéseket már feltetted korábban, kérlek NE ismételd meg őket:\n- " + "\n- ".join(recent)
 
+        is_math = "matematika" in subject.lower()
+
         lit_note = ""
         if is_lit:
             lit_note = "\n5. FONTOS: Ne idézz verseket vagy prózarészleteket (azok külön adatbázisból jönnek), hanem kérdezz irodalomtörténeti összefüggésekre, műfajokra, stíluskorszakokra, cselekményre és életrajzi adatokra!"
+
+        math_note = ""
+        if is_math:
+            math_note = """
+5. MATEMATIKA SPECIÁLIS SZABÁLYOK:
+   - A feladatok legalább 75%-a valódi, többlépéses SZÁMÍTÁSI feladat legyen (ne csak elméleti definíció!), amely papíron-számológéppel kiszámolható.
+   - Emelt szinten bátran adj integrálási, deriválási, logaritmusos, trigonometrikus vagy összetett valószínűségszámítási feladatokat!
+   - A képleteket szabványos LaTeX formátumban írd (pl. $\\frac{x^2}{2}$, $\\sqrt{3}$, $\\int_0^1 x^2 dx$), és az 'explanation' mezőben vezesd le lépésről lépésre a számítást!"""
 
         prompt = f"""
         Készíts egy {ai_count} kérdésből álló, pörgős, QuizUp-stílusú magyar nyelvű feleletválasztós kvízt a magyar gimnáziumi érettségi követelmények alapján!
@@ -401,7 +426,7 @@ def generate_quiz(api_key, model_name, subject, topic, level, count, history):
         1. A kérdések legyenek szakmailag 100%-ig pontosak, de tömörek és jól olvashatók.
         2. Minden kérdéshez pontosan 4 válaszlehetőség tartozzon, csak 1 helyes válasszal.
         3. Az 'explanation' mezőben adj rövid, közérthető magyarázatot.
-        4. Kerüld az ismétlődő, unalmas kliséket.{lit_note}{history_text}
+        4. Kerüld az ismétlődő, unalmas kliséket.{lit_note}{math_note}{history_text}
         """
 
         response = client.models.generate_content(
