@@ -295,7 +295,7 @@ def generate_quiz(api_key, model_name, subject, topic, level, count, history):
 
     # --- LÉPCSŐZETES 30 KÉRDÉSES IQ TESZT ---
     if is_iq:
-                tier_plan = list((1,) * 8 + (2,) * 8 + (3,) * 8 + (4,) * 6)
+        tier_plan = list((1,) * 8 + (2,) * 8 + (3,) * 8 + (4,) * 6)
 
         tier_names = {
             1: "I. szint (90–105 IQ)",
